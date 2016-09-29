@@ -14,7 +14,7 @@ pip install numpy matplotlib
 
 # Build #
 
-By default the firmware is configured for the Arduino Duemilnove or other atmega168-based arduino platforms. To build for an ESC target, edit Makefile and hal.h
+By default the firmware is configured for the Arduino Duemilnove or other atmega168-based Arduino platforms. Output waveforms will be on pins 7-12, with debug trace on pin 13. To build for an ESC target edit Makefile and hal.h
 
 vim lut.h
 
