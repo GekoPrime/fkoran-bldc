@@ -8,7 +8,7 @@ http://www.readytoflyquads.com/rtf-hugesc-12amp
 
 # Environment #
 
-apt-get install python3 python-pip feh gcc-avr avr-libc avrdude
+apt-get install python python-pip feh gcc-avr avr-libc avrdude
 
 pip install numpy matplotlib
 
