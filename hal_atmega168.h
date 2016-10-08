@@ -3,27 +3,24 @@
 
 #include <stdint.h>
 #include <avr/io.h>
+#include <avr/cpufunc.h>
 
-#define HAL_PWM_PRESCALER  8
+#define HAL_INVERTn
 
-#define HAL_TIMER_XY_OVF_VECTOR TIMER1_OVF_vect
+// simonk firmware uses a dead time of 300ns
+// 5cy / 16MHz = 312.5ns
+// set or clear will account for the 5th cycle
+#define HAL_DEAD_TIME    {_NOP(); _NOP(); _NOP(); _NOP();}
 
-#define HAL_TIMER_X_VECTOR TIMER1_COMPA_vect
-#define HAL_TIMER_X_MATCH  OCR1A
-#define HAL_TIMER_X_COUNT  TCNT1
+#define HAL_PWM_OVF_VECTOR TIMER1_OVF_vect
 
-#define HAL_TIMER_Y_VECTOR TIMER1_COMPB_vect
-#define HAL_TIMER_Y_MATCH  OCR1B
-#define HAL_TIMER_Y_COUNT  TCNT1
+#define HAL_PWM_X_VECTOR TIMER1_COMPA_vect
+#define HAL_PWM_X_MATCH  OCR1A
+#define HAL_PWM_X_EN ( _BV(OCIE1A) )
 
-#define HAL_TIMER_Z_OVF_VECTOR TIMER2_OVF_vect
-
-#define HAL_TIMER_Z_VECTOR TIMER2_COMPA_vect
-#define HAL_TIMER_Z_MATCH  OCR2A
-#define HAL_TIMER_Z_COUNT  TCNT2
-
-#define HAL_TIMER_UPDATE_VECTOR TIMER0_OVF_vect
-#define HAL_TIMER_UPDATE_PRESCALER  64
+#define HAL_PWM_Y_VECTOR TIMER1_COMPB_vect
+#define HAL_PWM_Y_MATCH  OCR1B
+#define HAL_PWM_Y_EN ( _BV(OCIE1B) )
 
 #define HAL_TRACE_DDR  DDRB
 #define HAL_TRACE_PORT PORTB
@@ -53,20 +50,14 @@
 #define HAL_Cp_PORT PORTD
 #define HAL_Cp_PIN  _BV(7)
 
-#define TIMER0_INITA ( 0 ) // normal mode (8 bit single slope)
-#define TIMER0_INITB ( _BV(CS00)|_BV(CS01) ) // CS00|CS01 (64:1 clock prescaler)
-#define TIMSK0_INIT ( _BV(TOIE0) ) // overflow interrupt enable
-
-#define TIMER1_INITA ( _BV(WGM10) ) // WGM10 (8-bit phase correct PWM)
-#define TIMER1_INITB ( _BV(CS11) ) // CS10 (1:1 clock prescaler)
-#define TIMSK1_INIT ( _BV(OCIE1A)|_BV(OCIE1B)|_BV(TOIE1) ) // OCR1A match enable, OCR1B match enable, overflow enable
-
-#define TIMER2_INITA ( _BV(WGM20) ) // WGM20 (8-bit phase correct PWM)
-#define TIMER2_INITB ( _BV(CS21) ) // CS20 (1:1 clock prescaler), 
-#define TIMSK2_INIT ( _BV(OCIE2A)|_BV(TOIE2) ) // OCR2A match enable, overflow enable
-
-void hal_pwm_timer_setup();
-
-void hal_update_timer_setup();
+#define HAL_TIMER1_INITA 0
+#define HAL_TIMER1_INITB ( _BV(WGM13)|_BV(CS10) ) // WGM13 (dual slope PWM, update OCR and flag TOV on bottom, ICR is TOP), CS10 (1x prescale)
+#define HAL_TIMSK1_INIT ( _BV(TOIE1) ) // TOV interrupt enable
+#define HAL_TIMSK1_MASK ( _BV(TOIE1)|_BV(OCIE1A)|_BV(OCIE1B)|_BV(ICIE1) )
+#define HAL_TIMSK1 TIMSK1
+#define HAL_ICR1 ICR1
+#define HAL_TCNT1 TCNT1
+#define HAL_TCCR1A TCCR1A
+#define HAL_TCCR1B TCCR1B
 
 #endif

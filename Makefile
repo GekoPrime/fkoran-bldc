@@ -21,7 +21,7 @@ DEVICE     = atmega168
 CLOCK      = 16000000
 PROGRAMMER = -c usbtiny -p m168
 #PROGRAMMER = -c usbtiny -p m8
-OBJECTS    = bldc.o lut.o lut_data.o hal_atmega168.o
+OBJECTS    = bldc.o lut.o lut_data.o hal.o
 #OBJECTS    = bldc.o lut.o lut_data.o hal_atmega8.o
 FUSES      = -U hfuse:w:0xCA:m -U lfuse:w:0x3F:m
 
@@ -32,10 +32,10 @@ FUSES      = -U hfuse:w:0xCA:m -U lfuse:w:0x3F:m
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -std=gnu11 -Wall -O3 -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -g
+COMPILE = avr-gcc -std=gnu11 -Wall -O3 -ffixed-4 -ffixed-5 -ffixed-6 -ffixed-7 -ffixed-8 -ffixed-9 -ffixed-10 -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -g
 
 # symbolic targets:
-all:	main.hex
+all:	main.hex lst copy
 
 .c.o:
 	$(COMPILE) -c $< -o $@
@@ -61,7 +61,7 @@ fuse:
 	$(AVRDUDE) $(FUSES)
 
 clean:
-	rm -f main.hex main.elf main.lst $(OBJECTS)
+	rm -f main.hex main.elf main.lst lut_data.c *.png $(OBJECTS)
 
 # file targets:
 main.elf: $(OBJECTS)
@@ -71,6 +71,9 @@ main.hex: main.elf
 	rm -f main.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
 	avr-size --format=avr --mcu=$(DEVICE) main.elf
+
+lut_data.c:
+	python gen_lut.py 96
 
 # Targets for code debugging and analysis:
 disasm:	main.elf
