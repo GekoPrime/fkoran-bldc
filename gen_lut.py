@@ -6,45 +6,8 @@ import re
 import numpy as np
 from matplotlib import pyplot
 
-num_entries = 0
-min_val = 0
-max_val = 0
-modulation = ''
-
-# extract '#define's from lut.h
-with open('lut.h') as f:
-    for line in f:
-        m = re.search('#define\sLUT_NUM_ENTRIES\s([0-9]*)', line)
-        if m is not None:
-            if m.group(1) is not None:
-                num_entries = int(m.group(1))
-                break
-with open('lut.h') as f:
-    for line in f:
-        m = re.search('#define\sLUT_MIN_VAL\s([0-9]*)', line)
-        if m is not None:
-            if m.group(1) is not None:
-                min_val = int(m.group(1))
-                break
-with open('lut.h') as f:
-     for line in f:
-         m = re.search('#define\sLUT_MAX_VAL\s([0-9]*)', line)
-         if m is not None:
-             if m.group(1) is not None:
-                 max_val = int(m.group(1))
-                 break
-with open('lut.h') as f:
-     for line in f:
-         m = re.search('#define\sLUT_MODULATION\s(.*)', line)
-         if m is not None:
-             if m.group(1) is not None:
-                 modulation = m.group(1)
-                 break
-
-if (modulation != 'sine' and modulation != 'svm'):
-    print('unknown modulation type {}'.format(modulation))
-    print('defaulting to sine')
-    modulation = 'sine'
+num_entries = int(sys.argv[1])
+max_val = 255
     
 # generate entries
 seg120 = 2*np.pi/3
@@ -53,62 +16,36 @@ b = np.empty(num_entries)
 c = np.empty(num_entries)
 phase = np.linspace(0, 2*np.pi, num=num_entries, endpoint=False);
 
-if modulation == 'svm':
-    x = 0*num_entries/3
-    y = 1*num_entries/3
-    a[x:y] =        np.sin(phase[x:y]           )
-    b[x:y] =       -np.sin(phase[x:y] - 1*seg120)
-    c[x:y] = np.zeros_like(phase[x:y]           )
-    
-    x = 1*num_entries/3
-    y = 2*num_entries/3
-    a[x:y] =       -np.sin(phase[x:y] - 2*seg120)
-    b[x:y] = np.zeros_like(phase[x:y]           )
-    c[x:y] =        np.sin(phase[x:y] - 1*seg120)
-    
-    x = 2*num_entries/3
-    y = 3*num_entries/3
-    a[x:y] = np.zeros_like(phase[x:y]           )
-    b[x:y] =        np.sin(phase[x:y] - 2*seg120)
-    c[x:y] =       -np.sin(phase[x:y]           )
-else:
-    a = np.sin(phase           )
-    b = np.sin(phase + 1*seg120)
-    c = np.sin(phase + 2*seg120)
-    
-    a += 1
-    b += 1
-    c += 1
-    
-    a /= 2
-    b /= 2
-    c /= 2
+# segment 0
+x = 0*num_entries/3
+y = 1*num_entries/3
+a[x:y] =        np.sin(phase[x:y]           )
+b[x:y] =       -np.sin(phase[x:y] - 1*seg120)
+c[x:y] = np.zeros_like(phase[x:y]           )
 
-a *= max_val-min_val
-b *= max_val-min_val
-c *= max_val-min_val
+# segment 1
+x = 1*num_entries/3
+y = 2*num_entries/3
+a[x:y] =       -np.sin(phase[x:y] - 2*seg120)
+b[x:y] = np.zeros_like(phase[x:y]           )
+c[x:y] =        np.sin(phase[x:y] - 1*seg120)
 
-a += min_val
-b += min_val
-c += min_val
+# segment 2
+x = 2*num_entries/3
+y = 3*num_entries/3
+a[x:y] = np.zeros_like(phase[x:y]           )
+b[x:y] =        np.sin(phase[x:y] - 2*seg120)
+c[x:y] =       -np.sin(phase[x:y]           )
 
-a[a < min_val] = min_val
-b[b < min_val] = min_val
-c[c < min_val] = min_val
-
-a[a > max_val] = max_val
-b[b > max_val] = max_val
-c[c > max_val] = max_val
+# scale to requirements
+a *= max_val
+b *= max_val
+c *= max_val
 
 # convert to integer
 a = a.astype(int)
 b = b.astype(int)
 c = c.astype(int)
-
-# write to plot
-pyplot.figure()
-pyplot.plot(phase, a, phase, b, phase, c, linestyle='steps')
-pyplot.savefig('lut_data.png', bbox_inches='tight')
 
 # write to lut_data.c
 with open('lut_data.c', 'w') as f:
@@ -123,6 +60,24 @@ with open('lut_data.c', 'w') as f:
         f.write('\t{{ 0x{:02X}, 0x{:02X}, 0x{:02X} }},\n'.format(aa, bb, cc))
     f.write('};\n')
     
+# apply throttle and clipping
+pwm_period = 1024
+pwm_isr_len = 40
+throttle = int(0.9*pwm_period/max_val)
+a *= throttle
+b *= throttle
+c *= throttle
+a[a<pwm_isr_len] = 0
+b[b<pwm_isr_len] = 0
+c[c<pwm_isr_len] = 0
+a[a>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
+b[b>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
+c[c>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
+
+# write lut data to plot
+pyplot.figure()
+pyplot.plot(phase, a, phase, b, phase, c, linestyle='steps')
+pyplot.savefig('lut_data.png', bbox_inches='tight')
     
 # calculate Delta configuration coil voltages
 #
@@ -145,26 +100,5 @@ y = u*np.sin(0*seg120) + v*np.sin(1*seg120) + w*np.sin(2*seg120)
 pyplot.figure()
 pyplot.scatter(x, y, marker='.')
 pyplot.savefig('vector.png', bbox_inches='tight')
-    
-# calculate Delta configuration coil voltages
-#
-#   b
-#  / \
-# a---c
-#
-u = a-b
-v = b-c
-w = c-a
 
-pyplot.figure()
-pyplot.plot(phase, u, phase, v, phase, w, linestyle='steps')
-pyplot.savefig('delta_coil.png', bbox_inches='tight')
-
-# calculate steady state dipole vectors
-x = u*np.cos(0*seg120) + v*np.cos(1*seg120) + w*np.cos(2*seg120)
-y = u*np.sin(0*seg120) + v*np.sin(1*seg120) + w*np.sin(2*seg120)
-
-pyplot.figure()
-pyplot.scatter(x, y, marker='.')
-pyplot.savefig('vector.png', bbox_inches='tight')
 
