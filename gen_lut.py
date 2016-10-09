@@ -91,7 +91,7 @@ w = c-a
 
 pyplot.figure()
 pyplot.plot(phase, u, phase, v, phase, w, linestyle='steps')
-pyplot.savefig('delta_coil.png', bbox_inches='tight')
+pyplot.savefig('lut_interphase_voltage.png', bbox_inches='tight')
 
 # calculate steady state dipole vectors
 x = u*np.cos(0*seg120) + v*np.cos(1*seg120) + w*np.cos(2*seg120)
@@ -99,6 +99,6 @@ y = u*np.sin(0*seg120) + v*np.sin(1*seg120) + w*np.sin(2*seg120)
 
 pyplot.figure()
 pyplot.scatter(x, y, marker='.')
-pyplot.savefig('vector.png', bbox_inches='tight')
+pyplot.savefig('lut_vectors.png', bbox_inches='tight')
 
 

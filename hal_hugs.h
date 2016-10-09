@@ -53,7 +53,7 @@
 #define HAL_TIMER1_INITA 0
 #define HAL_TIMER1_INITB ( _BV(WGM13)|_BV(CS10) ) // WGM13 (dual slope PWM, update OCR and flag TOV on bottom, ICR is TOP), CS10 (1x prescale)
 #define HAL_TIMSK1_INIT ( _BV(TOIE1) ) // TOV interrupt enable
-#define HAL_TIMSK1_MASK ( _BV(TOIE1)|_BV(OCIE1A)|_BV(OCIE1B)|_BV(ICIE1) )
+#define HAL_TIMSK1_MASK ( _BV(TOIE1)|_BV(OCIE1A)|_BV(OCIE1B)|_BV(TICIE1) )
 #define HAL_TIMSK1 TIMSK
 #define HAL_ICR1 ICR1
 #define HAL_TCNT1 TCNT1

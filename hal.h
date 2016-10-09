@@ -1,8 +1,14 @@
 #ifndef HAL_H
 #define HAL_H
 
-#include "hal_atmega168.h"
-//#include "hal_atmega8.h"
+#ifdef TARGET_HUGS
+#include "hal_hugs.h"
+#endif
+
+#ifdef TARGET_ARDUINO
+#include "hal_arduino.h"
+#endif
+
 #include <util/atomic.h>
 
 void hal_pwm_timer_setup();
