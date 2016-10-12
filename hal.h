@@ -110,6 +110,20 @@ inline void hal_a_high()
     #endif
 }
 
+inline void hal_a_tristate()
+{
+    #ifdef HAL_INVERTn
+    hal_set_pin(&HAL_An_PORT, HAL_An_PIN);
+    #else
+    hal_clear_pin(&HAL_An_PORT, HAL_An_PIN);
+    #endif
+    #ifdef HAL_INVERTp
+    hal_set_pin(&HAL_Ap_PORT, HAL_Ap_PIN);
+    #else
+    hal_clear_pin(&HAL_Ap_PORT, HAL_Ap_PIN);
+    #endif
+}
+
 inline void hal_b_low()
 {
     #ifdef HAL_INVERTp
@@ -140,6 +154,20 @@ inline void hal_b_high()
     #endif
 }
 
+inline void hal_b_tristate()
+{
+    #ifdef HAL_INVERTn
+    hal_set_pin(&HAL_Bn_PORT, HAL_Bn_PIN);
+    #else
+    hal_clear_pin(&HAL_Bn_PORT, HAL_Bn_PIN);
+    #endif
+    #ifdef HAL_INVERTp
+    hal_set_pin(&HAL_Bp_PORT, HAL_Bp_PIN);
+    #else
+    hal_clear_pin(&HAL_Bp_PORT, HAL_Bp_PIN);
+    #endif
+}
+
 inline void hal_c_low()
 {
     #ifdef HAL_INVERTp
@@ -167,6 +195,20 @@ inline void hal_c_high()
     hal_clear_pin(&HAL_Cp_PORT, HAL_Cp_PIN);
     #else
     hal_set_pin(&HAL_Cp_PORT, HAL_Cp_PIN);
+    #endif
+}
+
+inline void hal_c_tristate()
+{
+    #ifdef HAL_INVERTn
+    hal_set_pin(&HAL_Cn_PORT, HAL_Cn_PIN);
+    #else
+    hal_clear_pin(&HAL_Cn_PORT, HAL_Cn_PIN);
+    #endif
+    #ifdef HAL_INVERTp
+    hal_set_pin(&HAL_Cp_PORT, HAL_Cp_PIN);
+    #else
+    hal_clear_pin(&HAL_Cp_PORT, HAL_Cp_PIN);
     #endif
 }
 
