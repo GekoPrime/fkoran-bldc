@@ -1,5 +1,5 @@
-#ifndef HAL_ATMEGA168_H
-#define HAL_ATMEGA168_H
+#ifndef HAL_ARDUINO_H
+#define HAL_ARDUINO_H
 
 #include <stdint.h>
 #include <avr/io.h>

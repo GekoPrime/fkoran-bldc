@@ -1,5 +1,5 @@
-#ifndef HAL_ATMEGA168_H
-#define HAL_ATMEGA168_H
+#ifndef HAL_HUGS_H
+#define HAL_HUGS_H
 
 #include <stdint.h>
 #include <avr/io.h>

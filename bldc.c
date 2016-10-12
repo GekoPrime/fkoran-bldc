@@ -182,9 +182,9 @@ void setup()
     hal_gpio_setup();
     hal_pwm_timer_setup(PWM_PERIOD);
     
-    speed = 0x10000/60;
+    speed = 40;//0x10000/60;
     phase = 0;
-    throttle = 1;//THROTTLE_MAX;
+    throttle = THROTTLE_MAX;
     
     pwm_update();
     
