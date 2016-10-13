@@ -7,7 +7,7 @@
 #include "hal.h"
 #include "lut.h"
 
-#define PWM_PERIOD 3000
+#define PWM_PERIOD 1200
 #define THROTTLE_MAX ( (PWM_PERIOD-TOV_ISR_LEN)/256 )
 #define PWM_ISR_LEN 40
 #define TOV_ISR_LEN 40
@@ -179,14 +179,14 @@ void hal_gpio_setup()
 
 void setup()
 {
-    hal_gpio_setup();
-    hal_pwm_timer_setup(PWM_PERIOD);
-    
-    speed = 40;//0x10000/60;
+    speed = 1000;//0x10000/60;
     phase = 0;
-    throttle = THROTTLE_MAX;
+    throttle = 1;//THROTTLE_MAX;
     
     pwm_update();
+
+    hal_gpio_setup();
+    hal_pwm_timer_setup(PWM_PERIOD);
     
     sei();
 }
