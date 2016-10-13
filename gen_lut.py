@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import pyplot
 
 num_entries = int(sys.argv[1])
-max_val =64*3
+max_val =32*3
     
 # generate entries
 seg120 = 2*np.pi/3

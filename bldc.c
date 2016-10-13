@@ -7,7 +7,7 @@
 #include "hal.h"
 #include "lut.h"
 
-#define PWM_PERIOD 1200
+#define PWM_PERIOD 600
 #define THROTTLE_MAX ( (PWM_PERIOD-TOV_ISR_LEN)/256 )
 #define PWM_ISR_LEN 40
 #define TOV_ISR_LEN 40
