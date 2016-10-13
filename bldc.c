@@ -7,188 +7,161 @@
 #include "hal.h"
 #include "lut.h"
 
-#define PWM_PERIOD 3000
-#define THROTTLE_MAX ( (PWM_PERIOD-TOV_ISR_LEN)/256 )
-#define PWM_ISR_LEN 40
-#define TOV_ISR_LEN 40
+#define PWM_PERIOD  ( 1200 )
+#define THROTTLE    ( PWM_PERIOD/8)
+#define ALIGNMENT_DURATION  ( 10 * (F_CPU/1000) ) // ms
+#define ZERO_THRESHOLD
 
-#define BRIDGE_A 0
-#define BRIDGE_B 1
-#define BRIDGE_C 2 // could save a few instructions in HAL_PWM_Y_VECTOR if this were zero
+uint8_t phase;    // from 0 to 5
+uint16_t time;    // incremented on every PWM tick
+uint16_t time_z0; // time of most recent zero crossing
+uint16_t time_z1; // time of second most recent zero crossing
+uint16_t time_commutation; // time of next scheduled commutation
 
-uint16_t speed;
-uint16_t phase;
-uint8_t throttle;
+// suppress back-emf scheduled commutation during startup
+uint8_t suppress_commutation;
 
-register uint8_t event_x __asm("r4");
-register uint8_t event_y __asm("r5");
-register uint8_t bridge_x __asm("r6");
-register uint8_t bridge_y __asm("r7");
+uint8_t pwm_event; // idnetify slope when doing dual slope PWM
 
-register uint8_t bridge_x_buffer __asm("r8");
-register uint8_t bridge_y_buffer __asm("r9");
+typedef enum {A, B, C} channel_t;
+channel_t role_vcc[6] = {A, A, B, B, C, C};
+channel_t role_gnd[6] = {B, C, C, A, A, B};
+channel_t role_tri[6] = {C, B, A, C, B, A};
+// analog comparator takes reference as +
+//                               mux as -
+// if waiting for a rising edge, wait for ACO == 0
+// OCR ISR uses XOR to avoid an awkward _BV()
+// so polarity is inverted. Rising edge is slope 1
+uint8_t  emf_slope[6] = {0, 1, 0, 1, 0, 1};
 
-volatile register uint8_t ready_for_update __asm("r10");
+uint8_t pwm_channel;
 
 ISR(HAL_PWM_OVF_VECTOR)
 {
-    // OCRn is buffered in hardware
-    // hal_n_set_ocr will take effect here
-    event_x = 0;
-    event_y = 0;
-    bridge_x = bridge_x_buffer;
-    bridge_y = bridge_y_buffer;
-    ready_for_update = 1;
+    hal_toggle_pin_atomic(&HAL_TRACE_PORT, HAL_TRACE_PIN);
+
+    time++;
+    
+    if (time == time_commutation && !suppress_commutation)
+    {
+        phase = (phase+1)%6;
+    }
+
+    if (hal_acomp())
+    {
+    //    hal_set_pin(&HAL_TRACE_PORT, HAL_TRACE_PIN);
+    }
+    else
+    {
+    //    hal_clear_pin(&HAL_TRACE_PORT, HAL_TRACE_PIN);
+    }
+        hal_a_low();
+        hal_b_low();
+        hal_c_low();
+
+    if (hal_acomp() ^ emf_slope[phase])
+    {
+        time_commutation = time + (time_z0-time_z1)/2;
+        time_z1 = time_z0;
+        time_z0 = time;
+    }
+    
+    if (role_tri[phase] == A)
+    {
+        hal_acomp_mux(HAL_Aemf_MUX);
+        hal_a_tristate();
+        hal_b_low();
+        hal_c_low();
+    }
+    else if (role_tri[phase] == B)
+    {
+        hal_acomp_mux(HAL_Bemf_MUX);
+        hal_a_low();
+        hal_b_tristate();
+        hal_c_low();
+    }
+    else if (role_tri[phase] == C)
+    {
+        hal_acomp_mux(HAL_Cemf_MUX);
+        hal_a_low();
+        hal_b_low();
+        hal_c_tristate();
+    }
+
+    HAL_PWM_X_MATCH = PWM_PERIOD-THROTTLE;
+    pwm_event = 0;
+    pwm_channel = role_vcc[phase];
 }
 
 ISR(HAL_PWM_X_VECTOR)
 {
-    if (event_x == 0)
+    if (pwm_event == 0)
     {
-        event_x++;
-        if (bridge_x == BRIDGE_A)
-        {
-            hal_a_high();
-        }
-        else
-        {
-            hal_b_high();
-        }
+
+    if (pwm_channel == A)
+    {
+        hal_a_high();
+    }
+    else if (pwm_channel == B)
+    {
+        hal_b_high();
+    }
+    else if (pwm_channel == C)
+    {
+        hal_c_high();
+    }
+
     }
     else
     {
-        if (bridge_x == BRIDGE_A)
-        {
-            hal_a_low();
-        }
-        else
-        {
-            hal_b_low();
-        }
+
+    if (pwm_channel == A)
+    {
+        hal_a_low();
     }
+    else if (pwm_channel == B)
+    {
+        hal_b_low();
+    }
+    else if (pwm_channel == C)
+    {
+        hal_c_low();
+    }
+
+    }
+
+    pwm_event++;
 }
 
-ISR(HAL_PWM_Y_VECTOR)
+    
+void open_loop_startup()
 {
-    if (event_y == 0)
-    {
-        event_y++;
-        if (bridge_y == BRIDGE_C)
-        {
-            hal_c_high();
-        }
-        else
-        {
-            hal_b_high();
-        }
-    }
-    else
-    {
-        if (bridge_y == BRIDGE_C)
-        {
-            hal_c_low();
-        }
-        else
-        {
-            hal_b_low();
-        }
-    }
-}
+    suppress_commutation = 1;
+    
+    _delay_ms(80);
+    phase = (phase+1)%6;
+    _delay_ms(40);
+    phase = (phase+1)%6;
+    _delay_ms(20);
+    phase = (phase+1)%6;
 
-void pwm_update()
-{
-    uint8_t i;
-    uint8_t duty8[3];
-    uint16_t duty[3];
-    uint16_t x_duty;
-    uint16_t y_duty;
-    uint8_t x_bridge;
-    uint8_t y_bridge;
-    
-    phase += speed;
-    lut_interpolate(duty8, phase);
-
-    // apply throttle multiplier and clamp duty[] to the appropriate range
-    for (i=0; i<3; i++)
-    {
-        duty[i] = throttle * duty8[i];
-        if (duty[i] < PWM_ISR_LEN)
-        {
-            duty[i] = 0;
-        }
-        if (duty[i] > PWM_PERIOD-TOV_ISR_LEN)
-        {
-            duty[i] = PWM_PERIOD-TOV_ISR_LEN;
-        }
-    }
-    
-    // default x and y to disabled
-    x_duty = PWM_PERIOD+1;
-    y_duty = PWM_PERIOD+1;
-    x_bridge = BRIDGE_A;
-    y_bridge = BRIDGE_C;
-    
-    // assign bridges to pwm channels
-    if (duty[BRIDGE_A] != 0)
-    {
-        x_bridge = BRIDGE_A;
-        x_duty = duty[BRIDGE_A];
-    }
-    else if (duty[BRIDGE_B] != 0)
-    {
-        x_bridge = BRIDGE_B;
-        x_duty = duty[BRIDGE_B];
-    }
-    
-    if (duty[BRIDGE_C] != 0)
-    {
-        y_bridge = BRIDGE_C;
-        y_duty = duty[BRIDGE_C];
-    }
-    else if (x_bridge != BRIDGE_B && duty[BRIDGE_B] != 0)
-    {
-        y_bridge = BRIDGE_B;
-        y_duty = duty[BRIDGE_B];
-    }
-    
-    // atomic write
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-    {
-        bridge_x_buffer = x_bridge;
-        bridge_y_buffer = y_bridge;
-        hal_x_set_ocr(PWM_PERIOD-x_duty);
-        hal_y_set_ocr(PWM_PERIOD-y_duty);
-    }
-}
-
-void hal_gpio_setup()
-{
-    HAL_TRACE_DDR  |=  HAL_TRACE_PIN;
-    
-    HAL_An_DDR  |=  HAL_An_PIN;
-    HAL_Ap_DDR  |=  HAL_Ap_PIN;
-    HAL_Bn_DDR  |=  HAL_Bn_PIN;
-    HAL_Bp_DDR  |=  HAL_Bp_PIN;
-    HAL_Cn_DDR  |=  HAL_Cn_PIN;
-    HAL_Cp_DDR  |=  HAL_Cp_PIN;
-    
-    hal_a_low();
-    hal_b_low();
-    hal_c_low();
+    //suppress_commutation = 0;
 }
 
 void setup()
 {
     hal_gpio_setup();
     hal_pwm_timer_setup(PWM_PERIOD);
+    hal_acomp_setup();
     
-    speed = 40;//0x10000/60;
     phase = 0;
-    throttle = THROTTLE_MAX;
-    
-    pwm_update();
-    
+    time = 0;
+    time_commutation = 0xFFFF;
+
     sei();
+
+    open_loop_startup();
+    suppress_commutation = 1;
 }
 
 int main()
@@ -196,13 +169,7 @@ int main()
     setup();  
     while (1)
     {
-        if (ready_for_update)
-        {
-            pwm_update();
-            ready_for_update = 0;
-            continue;
-        }
-        hal_toggle_pin_atomic(&HAL_TRACE_PORT, HAL_TRACE_PIN);
+    //hal_toggle_pin_atomic(&HAL_TRACE_PORT, HAL_TRACE_PIN);
     }
     return 0;
 }

@@ -34,6 +34,11 @@
 #define HAL_Ap_PORT PORTD
 #define HAL_Ap_PIN  _BV(4)
 
+#define HAL_Aemf_DDR  DDRD
+#define HAL_Aemf_PORT PORTD
+#define HAL_Aemf_PIN  0 // NOP; this channel uses a dedicated PWM pin
+#define HAL_Aemf_MUX  6
+
 #define HAL_Bn_DDR  DDRC
 #define HAL_Bn_PORT PORTC
 #define HAL_Bn_PIN  _BV(4)
@@ -42,6 +47,11 @@
 #define HAL_Bp_PORT PORTC
 #define HAL_Bp_PIN  _BV(5)
 
+#define HAL_Bemf_DDR  DDRD
+#define HAL_Bemf_PORT PORTD
+#define HAL_Bemf_PIN  0 // NOP; this channel uses a dedicated PWM pin
+#define HAL_Bemf_MUX  7
+
 #define HAL_Cn_DDR  DDRB
 #define HAL_Cn_PORT PORTB
 #define HAL_Cn_PIN  _BV(0)
@@ -49,6 +59,11 @@
 #define HAL_Cp_DDR  DDRC
 #define HAL_Cp_PORT PORTC
 #define HAL_Cp_PIN  _BV(3)
+
+#define HAL_Cemf_DDR  DDRC
+#define HAL_Cemf_PORT PORTC
+#define HAL_Cemf_PIN  _BV(0)
+#define HAL_Cemf_MUX  0
 
 #define HAL_TIMER1_INITA 0
 #define HAL_TIMER1_INITB ( _BV(WGM13)|_BV(CS10) ) // WGM13 (dual slope PWM, update OCR and flag TOV on bottom, ICR is TOP), CS10 (1x prescale)

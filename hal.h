@@ -12,12 +12,26 @@
 #include <util/atomic.h>
 
 void hal_pwm_timer_setup();
+void hal_acomp_setup();
+void hal_gpio_setup();
 
 //
 //
 // the below must be included here so the compiler can inline
 //
 //
+
+inline void hal_acomp_mux(uint8_t mux)
+{
+    ADMUX &= 0xFFFF;
+    ADMUX |= mux;
+}
+
+
+inline uint8_t hal_acomp()
+{
+    return ACSR & _BV(ACO);
+}
 
 inline void hal_x_set_ocr(uint16_t duty)
 {
@@ -31,7 +45,11 @@ inline void hal_y_set_ocr(uint16_t duty)
 
 inline void hal_dead_time()
 {
-    HAL_DEAD_TIME;
+    __asm("add 1, r0");
+    __asm("add 1, r0");
+    __asm("add 1, r0");
+    __asm("add 1, r0");
+    __asm("add 1, r0");
 }
 
 inline void hal_set_pin(volatile uint8_t* port, uint8_t mask)

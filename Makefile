@@ -18,11 +18,11 @@ arduino: FUSES = -U hfuse:w:0xCA:m -U lfuse:w:0x3F:m
 arduino: CLOCK = 16000000
 arduino: clean arduino.hex
 
-OBJECTS    = bldc.o lut.o lut_data.o hal.o
-FIXED_REGS = -ffixed-4 -ffixed-5 -ffixed-6 -ffixed-7 -ffixed-8 -ffixed-9 -ffixed-10
+OBJECTS    = bldc.o hal.o
+FIXED_REGS = 
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -std=gnu11 -Wall -O3 $(FIXED_REGS) $(TARGET) -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -g
+COMPILE = avr-gcc -std=gnu99 -Wall -O3 $(FIXED_REGS) $(TARGET) -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -g
 
 .c.o:
 	$(COMPILE) -c $< -o $@
