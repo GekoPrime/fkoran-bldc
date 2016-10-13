@@ -45,11 +45,11 @@ inline void hal_y_set_ocr(uint16_t duty)
 
 inline void hal_dead_time()
 {
-    __asm("add 1, r0");
-    __asm("add 1, r0");
-    __asm("add 1, r0");
-    __asm("add 1, r0");
-    __asm("add 1, r0");
+    _NOP();
+    _NOP();
+    _NOP();
+    _NOP();
+    _NOP();
 }
 
 inline void hal_set_pin(volatile uint8_t* port, uint8_t mask)

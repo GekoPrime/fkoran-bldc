@@ -45,6 +45,7 @@ void hal_pwm_timer_setup(uint16_t top)
 
 void hal_acomp_setup()
 {
-    SFIOR |= ACME;
+    SFIOR |= _BV(ACME);
+    ADCSRA &= ~_BV(ADEN);
 }
 
