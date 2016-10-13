@@ -43,15 +43,6 @@ inline void hal_y_set_ocr(uint16_t duty)
     HAL_PWM_Y_MATCH = duty;
 }
 
-inline void hal_dead_time()
-{
-    _NOP();
-    _NOP();
-    _NOP();
-    _NOP();
-    _NOP();
-}
-
 inline void hal_set_pin(volatile uint8_t* port, uint8_t mask)
 {
     // this will compile to an atomic (sbi) if port and mask are constant
@@ -105,7 +96,7 @@ inline void hal_a_low()
     #else
     hal_clear_pin(&HAL_Ap_PORT, HAL_Ap_PIN);
     #endif
-    hal_dead_time();
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
     #ifdef HAL_INVERTn
     hal_clear_pin(&HAL_An_PORT, HAL_An_PIN);
     #else
@@ -120,7 +111,7 @@ inline void hal_a_high()
     #else
     hal_clear_pin(&HAL_An_PORT, HAL_An_PIN);
     #endif
-    hal_dead_time();
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
     #ifdef HAL_INVERTp
     hal_clear_pin(&HAL_Ap_PORT, HAL_Ap_PIN);
     #else
@@ -149,7 +140,7 @@ inline void hal_b_low()
     #else
     hal_clear_pin(&HAL_Bp_PORT, HAL_Bp_PIN);
     #endif
-    hal_dead_time();
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
     #ifdef HAL_INVERTn
     hal_clear_pin(&HAL_Bn_PORT, HAL_Bn_PIN);
     #else
@@ -164,7 +155,7 @@ inline void hal_b_high()
     #else
     hal_clear_pin(&HAL_Bn_PORT, HAL_Bn_PIN);
     #endif
-    hal_dead_time();
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
     #ifdef HAL_INVERTp
     hal_clear_pin(&HAL_Bp_PORT, HAL_Bp_PIN);
     #else
@@ -193,7 +184,7 @@ inline void hal_c_low()
     #else
     hal_clear_pin(&HAL_Cp_PORT, HAL_Cp_PIN);
     #endif
-    hal_dead_time();
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
     #ifdef HAL_INVERTn
     hal_clear_pin(&HAL_Cn_PORT, HAL_Cn_PIN);
     #else
@@ -208,7 +199,7 @@ inline void hal_c_high()
     #else
     hal_clear_pin(&HAL_Cn_PORT, HAL_Cn_PIN);
     #endif
-    hal_dead_time();
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
     #ifdef HAL_INVERTp
     hal_clear_pin(&HAL_Cp_PORT, HAL_Cp_PIN);
     #else

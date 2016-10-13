@@ -7,8 +7,8 @@
 #include "hal.h"
 #include "lut.h"
 
-#define PWM_PERIOD  ( 1200 )
-#define THROTTLE    ( 200 )
+#define PWM_PERIOD  ( 600 )
+#define THROTTLE    ( 100 )
 #define ALIGNMENT_DURATION  ( 10 * (F_CPU/1000) ) // ms
 #define ZERO_THRESHOLD
 
@@ -21,12 +21,12 @@ volatile uint16_t time_commutation; // time of next scheduled commutation
 // suppress back-emf scheduled commutation during startup
 volatile uint8_t suppress_commutation;
 
-volatile uint8_t pwm_event; // idnetify slope when doing dual slope PWM
+volatile uint8_t pwm_event; // identify slope when doing dual slope PWM
 
 typedef enum {A, B, C} channel_t;
-channel_t role_vcc[6] = {A, A, B, B, C, C};
+channel_t role_snk[6] = {A, A, B, B, C, C};
 channel_t role_gnd[6] = {B, C, C, A, A, B};
-channel_t role_tri[6] = {C, B, A, C, B, A};
+channel_t role_sns[6] = {C, B, A, C, B, A};
 
 // analog comparator takes reference as +
 //                               mux as -
@@ -35,7 +35,7 @@ channel_t role_tri[6] = {C, B, A, C, B, A};
 // so polarity is inverted. Rising edge is slope 1
 uint8_t  emf_slope[6] = {0, 1, 0, 1, 0, 1};
 
-channel_t pwm_channel;
+channel_t snk_channel;
 
 ISR(HAL_PWM_OVF_VECTOR)
 {
@@ -49,46 +49,57 @@ ISR(HAL_PWM_OVF_VECTOR)
         phase = (phase+1)%6;
     }
 
-    if (!hal_acomp())
-    {
-        hal_set_pin(&HAL_TRACE_PORT, HAL_TRACE_PIN);
-    }
-    else
-    {
-        hal_clear_pin(&HAL_TRACE_PORT, HAL_TRACE_PIN);
-    }
-
     if (!hal_acomp() ^ !emf_slope[phase])
     {
         time_commutation = time + (time_z0-time_z1)/2;
         time_z1 = time_z0;
         time_z0 = time;
     }
-    
-    if (role_tri[phase] == A)
+    hal_toggle_pin(&HAL_TRACE_PORT, HAL_TRACE_PIN);
+ 
+    if (role_snk[phase] == A)
     {
         hal_a_tristate();
+    }
+    else if (role_snk[phase] == B)
+    {
+        hal_b_tristate();
+    }
+    else if (role_snk[phase] == C)
+    {
+        hal_c_tristate();
+    }
+    
+    if (role_gnd[phase] == A)
+    {
+        hal_a_low();
+    }
+    else if (role_gnd[phase] == B)
+    {
         hal_b_low();
+    }
+    else if (role_gnd[phase] == C)
+    {
         hal_c_low();
+    }
+    
+    if (role_sns[phase] == A)
+    {
+        hal_a_tristate();
         hal_acomp_mux(HAL_Aemf_MUX);
     }
-    else if (role_tri[phase] == B)
+    else if (role_sns[phase] == B)
     {
-        hal_a_low();
         hal_b_tristate();
-        hal_c_low();
         hal_acomp_mux(HAL_Bemf_MUX);
     }
-    else if (role_tri[phase] == C)
+    else if (role_sns[phase] == C)
     {
-        hal_a_low();
-        hal_b_low();
         hal_c_tristate();
         hal_acomp_mux(HAL_Cemf_MUX);
     }
-
     pwm_event = 0;
-    pwm_channel = role_vcc[phase];
+    snk_channel = role_snk[phase];
 }
 
 ISR(HAL_PWM_X_VECTOR)
@@ -98,32 +109,32 @@ ISR(HAL_PWM_X_VECTOR)
     if (pwm_event == 0)
     {
         pwm_event = 1;
-        if (pwm_channel == A)
+        if (snk_channel == A)
         {
             hal_a_high();
         }
-        if (pwm_channel == B)
+        if (snk_channel == B)
         {
             hal_b_high();
         }
-        if (pwm_channel == C)
+        if (snk_channel == C)
         {
             hal_c_high();
         }
     }
     else
     {
-        if (pwm_channel == A)
+        if (snk_channel == A)
         {
-            hal_a_low();
+            hal_a_tristate();
         }
-        if (pwm_channel == B)
+        if (snk_channel == B)
         {
-            hal_b_low();
+            hal_b_tristate();
         }
-        if (pwm_channel == C)
+        if (snk_channel == C)
         {
-            hal_c_low();
+            hal_c_tristate();
         }
     }
 }

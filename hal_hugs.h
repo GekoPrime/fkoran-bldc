@@ -5,10 +5,7 @@
 #include <avr/io.h>
 #include <avr/cpufunc.h>
 
-// simonk firmware uses a dead time of 300ns
-// 5cy / 16MHz = 312.5ns
-// set or clear will account for the 5th cycle
-#define HAL_DEAD_TIME    {_NOP(); _NOP(); _NOP(); _NOP();}
+#define HAL_DEAD_TIME 5
 
 #define HAL_INVERTp
 
