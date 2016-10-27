@@ -10,7 +10,7 @@
 // simonk firmware uses a dead time of 300ns
 // 5cy / 16MHz = 312.5ns
 // set or clear will account for the 5th cycle
-#define HAL_DEAD_TIME    {_NOP(); _NOP(); _NOP(); _NOP();}
+#define HAL_DEAD_TIME    5
 
 #define HAL_PWM_OVF_VECTOR TIMER1_OVF_vect
 
@@ -25,6 +25,10 @@
 #define HAL_TRACE_DDR  DDRB
 #define HAL_TRACE_PORT PORTB
 #define HAL_TRACE_PIN  _BV(5)
+
+#define HAL_SENSOR_DDR  DDRD
+#define HAL_SENSOR_PORT PORTD
+#define HAL_SENSOR_PIN  _BV(0)
 
 #define HAL_An_DDR  DDRB
 #define HAL_An_PORT PORTB

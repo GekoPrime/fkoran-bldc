@@ -12,6 +12,8 @@
 #include <util/atomic.h>
 
 void hal_pwm_timer_setup();
+void hal_gpio_setup();
+uint8_t hal_sensor_tick();
 
 //
 //
@@ -31,11 +33,7 @@ inline void hal_y_set_ocr(uint16_t duty)
 
 inline void hal_dead_time()
 {
-    __asm("add r0, 1");
-    __asm("add r0, 1");
-    __asm("add r0, 1");
-    __asm("add r0, 1");
-    __asm("add r0, 1");
+    __builtin_avr_delay_cycles(HAL_DEAD_TIME);
 }
 
 inline void hal_set_pin(volatile uint8_t* port, uint8_t mask)
@@ -62,26 +60,6 @@ inline void hal_toggle_pin_atomic(volatile uint8_t* port, uint8_t mask)
     {
         hal_toggle_pin(port, mask);
     }
-}
-
-inline void hal_pwm_x_enable()
-{
-    HAL_TIMSK1 |= HAL_PWM_X_EN;
-}
-
-inline void hal_pwm_x_disable()
-{
-    HAL_TIMSK1 &= ~HAL_PWM_X_EN;
-}
-
-inline void hal_pwm_y_enable()
-{
-    HAL_TIMSK1 |= HAL_PWM_Y_EN;
-}
-
-inline void hal_pwm_y_disable()
-{
-    HAL_TIMSK1 &= ~HAL_PWM_Y_EN;
 }
 
 inline void hal_a_low()

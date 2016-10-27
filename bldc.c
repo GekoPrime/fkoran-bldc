@@ -7,8 +7,15 @@
 #include "hal.h"
 #include "lut.h"
 
+#define DEMAG_TIME
+#define TIMING_ADVANCE       ( 14*(0x10000/360) )
+#define PHASE_TARGET_OFFSET  ( 0x10000/6 )
+#define SENSOR_INCREMENT     ( 0x10000 / (2048/2) )
+
+#define ALIGNMENT_TIME  100  // ms
+
 #define PWM_PERIOD 600
-#define THROTTLE_MAX ( (PWM_PERIOD-TOV_ISR_LEN)/256 )
+#define THROTTLE_MAX  ( (PWM_PERIOD-TOV_ISR_LEN)/256 )
 #define PWM_ISR_LEN 40
 #define TOV_ISR_LEN 40
 
@@ -16,19 +23,19 @@
 #define BRIDGE_B 1
 #define BRIDGE_C 2 // could save a few instructions in HAL_PWM_Y_VECTOR if this were zero
 
-uint16_t speed;
+int16_t speed;
 uint16_t phase;
 uint8_t throttle;
 
-register uint8_t event_x __asm("r4");
+register uint8_t event_x __asm("r4"); // is this the first match event of the PWM cycle or the second?
 register uint8_t event_y __asm("r5");
-register uint8_t bridge_x __asm("r6");
-register uint8_t bridge_y __asm("r7");
+register uint8_t bridge_x __asm("r6"); // what bridge is associated with PWM X? A or B?
+register uint8_t bridge_y __asm("r7"); // what bridge is associated with PWM Y? B or C?
 
 register uint8_t bridge_x_buffer __asm("r8");
 register uint8_t bridge_y_buffer __asm("r9");
 
-volatile register uint8_t ready_for_update __asm("r10");
+volatile register uint8_t ready_for_update __asm("r10"); // pwm_update should compute PWM values for next cycle
 
 ISR(HAL_PWM_OVF_VECTOR)
 {
@@ -39,6 +46,7 @@ ISR(HAL_PWM_OVF_VECTOR)
     bridge_x = bridge_x_buffer;
     bridge_y = bridge_y_buffer;
     ready_for_update = 1;
+    // need to tristate the inactive channel
 }
 
 ISR(HAL_PWM_X_VECTOR)
@@ -104,8 +112,22 @@ void pwm_update()
     uint16_t y_duty;
     uint8_t x_bridge;
     uint8_t y_bridge;
-    
-    phase += speed;
+    uint16_t targetPhase;
+
+    phase += SENSOR_INCREMENT * hal_sensor_tick();
+
+    //  based on direction, decide what phase angle we should be driving
+    targetPhase = phase;
+    if (speed > 0)
+    {
+        targetPhase += PHASE_TARGET_OFFSET;
+    }
+    else if (speed < 0)
+    {
+        targetPhase -= PHASE_TARGET_OFFSET;
+    }
+
+    // get duty cycle from the lookup table
     lut_interpolate(duty8, phase);
 
     // apply throttle multiplier and clamp duty[] to the appropriate range
@@ -161,34 +183,20 @@ void pwm_update()
     }
 }
 
-void hal_gpio_setup()
-{
-    HAL_TRACE_DDR  |=  HAL_TRACE_PIN;
-    
-    HAL_An_DDR  |=  HAL_An_PIN;
-    HAL_Ap_DDR  |=  HAL_Ap_PIN;
-    HAL_Bn_DDR  |=  HAL_Bn_PIN;
-    HAL_Bp_DDR  |=  HAL_Bp_PIN;
-    HAL_Cn_DDR  |=  HAL_Cn_PIN;
-    HAL_Cp_DDR  |=  HAL_Cp_PIN;
-    
-    hal_a_low();
-    hal_b_low();
-    hal_c_low();
-}
 
 void setup()
 {
-    speed = 1000;//0x10000/60;
+    // align the motor at phase zero
+    speed = 0;
     phase = 0;
-    throttle = 1;//THROTTLE_MAX;
-    
+    throttle = THROTTLE_MAX;
     pwm_update();
 
     hal_gpio_setup();
     hal_pwm_timer_setup(PWM_PERIOD);
     
     sei();
+    _delay_ms(ALIGNMENT_TIME);
 }
 
 int main()

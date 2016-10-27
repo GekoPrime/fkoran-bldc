@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import pyplot
 
 num_entries = int(sys.argv[1])
-max_val =32*3
+max_val = 255
     
 # generate entries
 seg120 = 2*np.pi/3
@@ -17,25 +17,46 @@ c = np.empty(num_entries)
 phase = np.linspace(0, 2*np.pi, num=num_entries, endpoint=False);
 
 # segment 0
-x = 0*num_entries/3
-y = 1*num_entries/3
-a[x:y] =        np.sin(phase[x:y]           )
-b[x:y] =       -np.sin(phase[x:y] - 1*seg120)
-c[x:y] = np.zeros_like(phase[x:y]           )
+x = 0*num_entries/6
+y = 1*num_entries/6
+a[x:y] =  1
+b[x:y] =  0
+c[x:y] = -1
 
 # segment 1
-x = 1*num_entries/3
-y = 2*num_entries/3
-a[x:y] =       -np.sin(phase[x:y] - 2*seg120)
-b[x:y] = np.zeros_like(phase[x:y]           )
-c[x:y] =        np.sin(phase[x:y] - 1*seg120)
+x = 1*num_entries/6
+y = 2*num_entries/6
+a[x:y] =  1
+b[x:y] = -1
+c[x:y] =  0
 
 # segment 2
-x = 2*num_entries/3
-y = 3*num_entries/3
-a[x:y] = np.zeros_like(phase[x:y]           )
-b[x:y] =        np.sin(phase[x:y] - 2*seg120)
-c[x:y] =       -np.sin(phase[x:y]           )
+x = 2*num_entries/6
+y = 3*num_entries/6
+a[x:y] = -1
+b[x:y] =  1
+c[x:y] =  0
+
+# segment 3
+x = 3*num_entries/6
+y = 4*num_entries/6
+a[x:y] =  0
+b[x:y] =  1
+c[x:y] = -1
+
+# segment 4
+x = 4*num_entries/6
+y = 5*num_entries/6
+a[x:y] =  0
+b[x:y] = -1
+c[x:y] =  1
+
+# segment 5
+x = 5*num_entries/6
+y = 6*num_entries/6
+a[x:y] = -1
+b[x:y] =  0
+c[x:y] =  1
 
 # scale to requirements
 a *= max_val
@@ -61,33 +82,42 @@ with open('lut_data.c', 'w') as f:
     f.write('};\n')
     
 # apply throttle and clipping
-pwm_period = 1024
-pwm_isr_len = 40
-throttle = int(0.9*pwm_period/max_val)
-a *= throttle
-b *= throttle
-c *= throttle
-a[a<pwm_isr_len] = 0
-b[b<pwm_isr_len] = 0
-c[c<pwm_isr_len] = 0
-a[a>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
-b[b>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
-c[c>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
+#pwm_period = 1024
+#pwm_isr_len = 40
+#throttle = int(0.9*pwm_period/max_val)
+#a *= throttle
+#b *= throttle
+#c *= throttle
+#a[a<pwm_isr_len] = 0
+#b[b<pwm_isr_len] = 0
+#c[c<pwm_isr_len] = 0
+#a[a>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
+#b[b>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
+#c[c>pwm_period-pwm_isr_len] = pwm_period-pwm_isr_len
 
 # write lut data to plot
 pyplot.figure()
 pyplot.plot(phase, a, phase, b, phase, c, linestyle='steps')
 pyplot.savefig('lut_data.png', bbox_inches='tight')
     
-# calculate Delta configuration coil voltages
+# calculate Y configuration coil voltages
 #
-#   b
+#   a
+#   |
+#   n
 #  / \
-# a---c
+# c   b
 #
 u = a-b
 v = b-c
 w = c-a
+
+u[a<0] = 0
+u[b<0] = 0
+v[b<0] = 0
+v[c<0] = 0
+w[c<0] = 0
+w[a<0] = 0
 
 pyplot.figure()
 pyplot.plot(phase, u, phase, v, phase, w, linestyle='steps')
@@ -101,4 +131,12 @@ pyplot.figure()
 pyplot.scatter(x, y, marker='.')
 pyplot.savefig('lut_vectors.png', bbox_inches='tight')
 
+# calculate target vector
+angle = np.arctan(y/x)
+mag = np.sqrt(x**2 + y**2)
+torque = mag * np.sin(angle-(phase+2*np.pi/6))
+
+pyplot.figure()
+pyplot.scatter(phase, torque, marker='.')
+pyplot.savefig('torque.png', bbox_inches='tight')
 
